@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "unstopablerun",
   "version": "0.1.0",
   "private": true,
@@ -37,5 +38,21 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+=======
+  "name": "unstoppabledatabase",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "body-parser": "^2.2.1",
+    "cors": "^2.8.5",
+    "express": "^5.2.1"
+>>>>>>> b591774 (Inital Change)
   }
 }
