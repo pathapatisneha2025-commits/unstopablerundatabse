@@ -24,26 +24,16 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* CENTER MENU */}
+        {/* MENU */}
         <ul className={`nav-links ${open ? "active" : ""}`}>
-          <li>
-            <Link to="/" onClick={closeMenu}>Home</Link>
-          </li>
-          <li>
-            <Link to="/shop" onClick={closeMenu}>Shop</Link>
-          </li>
-          <li>
-            <Link to="/activitypage" onClick={closeMenu}>Activities</Link>
-          </li>
-          <li>
-            <Link to="/about" onClick={closeMenu}>About</Link>
-          </li>
-          <li>
-            <Link to="/contact" onClick={closeMenu}>Contact</Link>
-          </li>
+          <li><Link to="/" onClick={closeMenu}>Home</Link></li>
+          <li><Link to="/shop" onClick={closeMenu}>Shop</Link></li>
+          <li><Link to="/activitypage" onClick={closeMenu}>Activities</Link></li>
+          <li><Link to="/about" onClick={closeMenu}>About</Link></li>
+          <li><Link to="/contact" onClick={closeMenu}>Contact</Link></li>
         </ul>
 
-        {/* RIGHT ICONS */}
+        {/* ICONS */}
         <div className="nav-icons">
           <LuSearch />
           <LuHeart />
@@ -55,13 +45,20 @@ export default function Navbar() {
         </div>
 
         {/* HAMBURGER */}
-        <div className="hamburger" onClick={() => setOpen(!open)}>
+        <div
+          className={`hamburger ${open ? "open" : ""}`}
+          onClick={() => setOpen(!open)}
+        >
           {open ? <LuX /> : <LuMenu />}
         </div>
       </nav>
 
       <style>{`
-        * { box-sizing: border-box; }
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
 
         .navbar {
           position: sticky;
@@ -90,6 +87,7 @@ export default function Navbar() {
           text-decoration: none;
           font-size: 16px;
           color: #1f2937;
+          font-weight: 500;
         }
 
         .nav-links a:hover {
@@ -100,6 +98,7 @@ export default function Navbar() {
           display: flex;
           gap: 22px;
           font-size: 20px;
+          align-items: center;
         }
 
         .cart {
@@ -117,12 +116,34 @@ export default function Navbar() {
           border-radius: 50%;
         }
 
+        /* HAMBURGER BUTTON */
         .hamburger {
           display: none;
-          font-size: 26px;
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 24px;
           cursor: pointer;
+          transition: all 0.25s ease;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
         }
 
+        .hamburger:active {
+          transform: scale(0.92);
+        }
+
+        .hamburger.open {
+          background: #ff6a00;
+          color: #ffffff;
+          transform: rotate(90deg);
+        }
+
+        /* MOBILE */
         @media (max-width: 900px) {
           .navbar {
             grid-template-columns: auto auto;
@@ -137,8 +158,9 @@ export default function Navbar() {
             background: #e6e6e6;
             flex-direction: column;
             gap: 24px;
-            padding: 26px 0;
+            padding: 28px 0;
             display: none;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.08);
           }
 
           .nav-links.active {
@@ -150,7 +172,7 @@ export default function Navbar() {
           }
 
           .hamburger {
-            display: block;
+            display: flex;
           }
         }
       `}</style>
