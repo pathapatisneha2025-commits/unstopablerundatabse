@@ -73,35 +73,7 @@ const ActivitiesSection = () => {
         }
       `}</style>
 
-      {/* --- NAVBAR --- */}
-      <nav style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '18px 40px', borderBottom: '1px solid #f0f0f0', backgroundColor: '#fff',
-        position: 'sticky', top: 0, zIndex: 100
-      }}>
-        <div style={{ fontWeight: '900', fontSize: '22px', color: '#ff4d00', letterSpacing: '-1px' }}>RUNN</div>
-        
-        <div className="nav-menu" style={{ display: 'flex' }}>
-          <a href="#" className="nav-link">Shop</a>
-          <a href="#" className="nav-link">Activities</a>
-          <a href="#" className="nav-link">Collections</a>
-          <a href="#" className="nav-link">About</a>
-        </div>
-
-        <div style={{ display: 'flex', gap: '22px', alignItems: 'center', fontSize: '18px' }}>
-          <span style={{ cursor: 'pointer' }}>🔍</span>
-          <span style={{ cursor: 'pointer' }}>♡</span>
-          <div style={{ position: 'relative', cursor: 'pointer' }}>
-            <span>🛍️</span>
-            <span style={{
-              position: 'absolute', top: '-8px', right: '-8px', background: '#ff4d00',
-              color: 'white', borderRadius: '50%', width: '16px', height: '16px', 
-              fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 'bold'
-            }}>0</span>
-          </div>
-        </div>
-      </nav>
+   
 
       {/* --- HERO SECTION --- */}
       <section style={{ textAlign: 'center', padding: '80px 20px 40px' }}>

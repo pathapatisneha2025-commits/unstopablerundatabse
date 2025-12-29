@@ -23,6 +23,9 @@ export default function Navbar() {
 
         {/* CENTER MENU */}
         <ul className={`nav-links ${open ? "active" : ""}`}>
+           <li>
+            <a href="/" onClick={closeMenu}>Home</a>
+          </li>
           <li>
             <a href="/shop" onClick={closeMenu}>Shop</a>
           </li>
