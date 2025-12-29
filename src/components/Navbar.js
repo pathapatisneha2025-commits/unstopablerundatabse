@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   LuSearch,
   LuHeart,
@@ -18,26 +19,27 @@ export default function Navbar() {
       <nav className="navbar">
         {/* LOGO */}
         <div className="logo">
-          <img src="/companylogo.png" alt="RUNN" className="logo-desktop" />
+          <Link to="/" onClick={closeMenu}>
+            <img src="/companylogo.png" alt="RUNN" className="logo-desktop" />
+          </Link>
         </div>
 
         {/* CENTER MENU */}
         <ul className={`nav-links ${open ? "active" : ""}`}>
-           <li>
-            <a href="/" onClick={closeMenu}>Home</a>
+          <li>
+            <Link to="/" onClick={closeMenu}>Home</Link>
           </li>
           <li>
-            <a href="/shop" onClick={closeMenu}>Shop</a>
+            <Link to="/shop" onClick={closeMenu}>Shop</Link>
           </li>
           <li>
-            <a href="/activitypage" onClick={closeMenu}>Activities</a>
+            <Link to="/activitypage" onClick={closeMenu}>Activities</Link>
           </li>
-       
           <li>
-            <a href="/about" onClick={closeMenu}>About</a>
+            <Link to="/about" onClick={closeMenu}>About</Link>
           </li>
-             <li>
-            <a href="/contact" onClick={closeMenu}>Contact</a>
+          <li>
+            <Link to="/contact" onClick={closeMenu}>Contact</Link>
           </li>
         </ul>
 
