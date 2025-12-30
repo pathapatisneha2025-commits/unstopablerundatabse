@@ -45,6 +45,34 @@ router.post("/add", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// -----------------------------
+// GET CART FOR ALL USERS
+// -----------------------------
+router.get("/all", async (req, res) => {
+  try {
+    const cartItems = await pool.query(
+      `
+      SELECT 
+        c.id AS cart_item_id,
+        c.user_id,
+        c.product_id,
+        c.quantity,
+        p.name,
+        p.price,
+        p.images
+      FROM cart c
+      JOIN products p ON p.id = c.product_id
+      ORDER BY c.user_id
+      `
+    );
+
+    res.json(cartItems.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 // -----------------------------
 // GET CART BY USER
