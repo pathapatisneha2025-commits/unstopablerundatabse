@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const AddProducts = require("./routes/productroute");
 const Cart = require("./routes/cartroute");
+const OrdersRoute = require("./routes/ordersroute");
 
 
 const app = express();
@@ -11,6 +12,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/products", AddProducts);
 app.use("/cart", Cart);
+app.use("/orders",OrdersRoute);
 
 
 // Test Route
