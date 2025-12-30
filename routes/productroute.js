@@ -74,7 +74,7 @@ router.post("/add", upload.array("images", 5), async (req, res) => {
 ====================================================== */
 router.put("/update/:id", upload.array("images", 5), async (req, res) => {
   try {
-    const { name, category, price, stock } = req.body;
+    const { name, category, price, stock, existingImages } = req.body;
 
     const existing = await pool.query(
       `SELECT images FROM products WHERE id=$1`,
@@ -85,11 +85,11 @@ router.put("/update/:id", upload.array("images", 5), async (req, res) => {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    let imageUrls = existing.rows[0].images;
+    // Start with existing images from frontend
+    let imageUrls = existingImages ? JSON.parse(existingImages) : existing.rows[0].images;
 
-    // Replace images if new ones uploaded
+    // Add new uploaded images
     if (req.files && req.files.length > 0) {
-      imageUrls = [];
       for (const file of req.files) {
         const result = await uploadToCloudinary(file.buffer);
         imageUrls.push(result.secure_url);
@@ -113,6 +113,7 @@ router.put("/update/:id", upload.array("images", 5), async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 /* ======================================================
    GET ALL PRODUCTS
