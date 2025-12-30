@@ -29,7 +29,17 @@ router.post('/create', async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
-
+router.get('/all', async (req, res) => {
+  try {
+    const orders = await pool.query(
+      'SELECT id, user_id, items, total_price, address, created_at FROM orders ORDER BY created_at DESC'
+    );
+    res.json(orders.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 // -----------------------------
 // GET ORDERS BY USER
 // -----------------------------
@@ -49,17 +59,7 @@ router.get('/:userId', async (req, res) => {
     }
 });
 
-router.get('/all', async (req, res) => {
-  try {
-    const orders = await pool.query(
-      'SELECT id, user_id, items, total_price, address, created_at FROM orders ORDER BY created_at DESC'
-    );
-    res.json(orders.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+
 
 // GET orders count per category
 router.get('/count/category', async (req, res) => {
