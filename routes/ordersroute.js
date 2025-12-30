@@ -7,19 +7,20 @@ const pool = require('../db');
 // -----------------------------
 router.post('/create', async (req, res) => {
     try {
-        const { userId, items } = req.body;
+        const { userId, items, address } = req.body;
 
-        if (!userId || !items || !items.length) {
-            return res.status(400).json({ message: 'Invalid request' });
+        // Validate
+        if (!userId || !items || !items.length || !address) {
+            return res.status(400).json({ message: 'Invalid request: missing user/items/address' });
         }
 
         // Calculate total price
         const totalPrice = items.reduce((sum, item) => sum + item.product_price * item.quantity, 0);
 
-        // Insert order with JSONB items
+        // Insert order with JSONB items and address
         const result = await pool.query(
-            'INSERT INTO orders (user_id, items, total_price) VALUES ($1, $2, $3) RETURNING *',
-            [userId, JSON.stringify(items), totalPrice]
+            'INSERT INTO orders (user_id, items, total_price, address) VALUES ($1, $2, $3, $4) RETURNING *',
+            [userId, JSON.stringify(items), totalPrice, JSON.stringify(address)]
         );
 
         res.status(201).json({ message: 'Order placed successfully', order: result.rows[0] });
@@ -37,7 +38,7 @@ router.get('/:userId', async (req, res) => {
         const { userId } = req.params;
 
         const orders = await pool.query(
-            'SELECT id, user_id, items, total_price, created_at FROM orders WHERE user_id = $1 ORDER BY created_at DESC',
+            'SELECT id, user_id, items, total_price, address, created_at FROM orders WHERE user_id = $1 ORDER BY created_at DESC',
             [userId]
         );
 
