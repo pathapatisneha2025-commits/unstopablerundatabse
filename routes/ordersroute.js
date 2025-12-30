@@ -49,4 +49,34 @@ router.get('/:userId', async (req, res) => {
     }
 });
 
+router.get('/all', async (req, res) => {
+  try {
+    const orders = await pool.query(
+      'SELECT id, user_id, items, total_price, address, created_at FROM orders ORDER BY created_at DESC'
+    );
+    res.json(orders.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET orders count per category
+router.get('/count/category', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT p.category, COUNT(*) AS orders_count
+      FROM orders o,
+      LATERAL jsonb_array_elements(o.items) AS item
+      JOIN products p ON (p.id = (item->>'product_id')::int)
+      GROUP BY p.category
+      ORDER BY orders_count DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;
