@@ -79,4 +79,45 @@ router.get('/count/category', async (req, res) => {
   }
 });
 
+
+router.put("/update-status/:id", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  // validation
+  const allowedStatus = [
+    "Pending",
+    "Processing",
+    "Shipped",
+    "Delivered",
+    "Cancelled",
+  ];
+
+  if (!allowedStatus.includes(status)) {
+    return res.status(400).json({ error: "Invalid status value" });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE orders
+       SET status = $1
+       WHERE id = $2
+       RETURNING id, status`,
+      [status, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Order status updated",
+      order: result.rows[0],
+    });
+  } catch (err) {
+    console.error("Status update error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 module.exports = router;
