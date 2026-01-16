@@ -2,68 +2,33 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-
 // -----------------------------
-// CREATE ORDER WITH STOCK CHECK
+// CREATE ORDER
 // -----------------------------
 router.post('/create', async (req, res) => {
-  const client = await pool.connect(); // Use client for transaction
-  try {
-    const { userId, items, address } = req.body;
+    try {
+        const { userId, items, address } = req.body;
 
-    if (!userId || !items || !items.length || !address) {
-      return res.status(400).json({ message: 'Invalid request: missing user/items/address' });
+        // Validate
+        if (!userId || !items || !items.length || !address) {
+            return res.status(400).json({ message: 'Invalid request: missing user/items/address' });
+        }
+
+        // Calculate total price
+        const totalPrice = items.reduce((sum, item) => sum + item.product_price * item.quantity, 0);
+
+        // Insert order with JSONB items and address
+        const result = await pool.query(
+            'INSERT INTO orders (user_id, items, total_price, address) VALUES ($1, $2, $3, $4) RETURNING *',
+            [userId, JSON.stringify(items), totalPrice, JSON.stringify(address)]
+        );
+
+        res.status(201).json({ message: 'Order placed successfully', order: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
     }
-
-    await client.query('BEGIN'); // Start transaction
-
-    let totalPrice = 0;
-
-    for (const item of items) {
-      // Get product stock
-      const prodRes = await client.query(
-        'SELECT id, name, stock, price FROM products WHERE id=$1 FOR UPDATE',
-        [item.product_id]
-      );
-
-      const product = prodRes.rows[0];
-
-      if (!product) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({ message: `Product not found: ${item.product_id}` });
-      }
-
-      if (product.stock < item.quantity) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ message: `Not enough stock for ${product.name}` });
-      }
-
-      // Update stock
-      const newStock = product.stock - item.quantity;
-      await client.query('UPDATE products SET stock=$1 WHERE id=$2', [newStock, item.product_id]);
-
-      // Calculate total
-      totalPrice += product.price * item.quantity;
-    }
-
-    // Insert order
-    const result = await client.query(
-      'INSERT INTO orders (user_id, items, total_price, address) VALUES ($1, $2, $3, $4) RETURNING *',
-      [userId, JSON.stringify(items), totalPrice, JSON.stringify(address)]
-    );
-
-    await client.query('COMMIT'); // Commit transaction
-
-    res.status(201).json({ message: 'Order placed successfully', order: result.rows[0] });
-  } catch (err) {
-    await client.query('ROLLBACK'); // Rollback on error
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  } finally {
-    client.release();
-  }
 });
-
 router.get('/all', async (req, res) => {
   try {
     const orders = await pool.query(

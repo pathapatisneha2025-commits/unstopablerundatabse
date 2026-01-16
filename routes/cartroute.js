@@ -6,13 +6,39 @@ const pool = require("../db"); // PostgreSQL pool connection
 // ADD PRODUCTS TO CART
 // -----------------------------
 router.post("/add", async (req, res) => {
-  const { userId, items } = req.body; 
-  
+  const { userId, items } = req.body;
+
   if (!userId || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ message: "Invalid request" });
   }
 
   try {
+    // Fetch current product stock for all items
+    const productIds = items.map(i => i.product_id);
+    const productsRes = await pool.query(
+      `SELECT id, stock FROM products WHERE id = ANY($1::int[])`,
+      [productIds]
+    );
+    const productStocks = productsRes.rows.reduce((acc, p) => {
+      acc[p.id] = p.stock;
+      return acc;
+    }, {});
+
+    // Check if any item is out of stock
+    for (const item of items) {
+      if (!productStocks[item.product_id] || productStocks[item.product_id] < item.quantity) {
+        return res.status(400).json({ message: `Product ${item.product_name} is out of stock or insufficient quantity` });
+      }
+    }
+
+    // Deduct stock immediately
+    for (const item of items) {
+      await pool.query(
+        "UPDATE products SET stock = stock - $1 WHERE id = $2",
+        [item.quantity, item.product_id]
+      );
+    }
+
     // Check if user already has a cart
     const existingCart = await pool.query(
       "SELECT id, items FROM cart WHERE user_id=$1",
@@ -23,11 +49,8 @@ router.post("/add", async (req, res) => {
       // Merge items with existing cart
       const currentItems = existingCart.rows[0].items;
 
-      // Update quantities if product already exists
       items.forEach(newItem => {
-        const index = currentItems.findIndex(
-          i => i.product_id === newItem.product_id
-        );
+        const index = currentItems.findIndex(i => i.product_id === newItem.product_id);
         if (index !== -1) {
           currentItems[index].quantity += newItem.quantity;
         } else {
@@ -47,12 +70,14 @@ router.post("/add", async (req, res) => {
       );
     }
 
-    res.json({ message: "Products added to cart" });
+    res.json({ message: "Products added to cart and stock updated" });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 // -----------------------------
 // GET CART FOR ALL USERS
