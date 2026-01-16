@@ -5,7 +5,7 @@ const pool = require("../db"); // PostgreSQL pool connection
 
 
 // =================== REGISTER ===================
-app.post("/auth/register", async (req, res) => {
+router.post("/auth/register", async (req, res) => {
   const { name, email, password } = req.body;
 
   if (!name || !email || !password)
@@ -34,7 +34,7 @@ app.post("/auth/register", async (req, res) => {
 });
 
 // =================== LOGIN ===================
-app.post("/auth/login", async (req, res) => {
+router.post("/auth/login", async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password)
