@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const pool = require("../db"); // PostgreSQL pool connection
-
-
+const bcrypt = require("bcrypt");       // ✅ Import bcrypt
+const pool = require("../db");          // PostgreSQL pool connection
 
 // =================== REGISTER ===================
 router.post("/auth/register", async (req, res) => {
@@ -56,5 +55,4 @@ router.post("/auth/login", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+module.exports = router;
