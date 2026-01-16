@@ -33,18 +33,17 @@ const uploadToCloudinary = (buffer, folder = "products") => {
 };
 
 /* ======================================================
-   ADD PRODUCT (MULTIPLE IMAGES)
+   ADD PRODUCT (MULTIPLE IMAGES + SUBCATEGORY)
 ====================================================== */
 router.post("/add", upload.array("images", 5), async (req, res) => {
   try {
-    const { name, category, price, stock } = req.body;
+    const { name, category, subcategory, price, stock } = req.body;
 
     if (!name || !price) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
     let imageUrls = [];
-
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const result = await uploadToCloudinary(file.buffer);
@@ -53,10 +52,10 @@ router.post("/add", upload.array("images", 5), async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO products (name, category, price, stock, images)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO products (name, category, subcategory, price, stock, images)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [name, category, price, stock, imageUrls]
+      [name, category, subcategory, price, stock, imageUrls]
     );
 
     res.json({
@@ -70,11 +69,11 @@ router.post("/add", upload.array("images", 5), async (req, res) => {
 });
 
 /* ======================================================
-   UPDATE PRODUCT (OPTIONAL IMAGE REPLACE)
+   UPDATE PRODUCT (OPTIONAL IMAGE REPLACE + SUBCATEGORY)
 ====================================================== */
 router.put("/update/:id", upload.array("images", 5), async (req, res) => {
   try {
-    const { name, category, price, stock, existingImages } = req.body;
+    const { name, category, subcategory, price, stock, existingImages } = req.body;
 
     const existing = await pool.query(
       `SELECT images FROM products WHERE id=$1`,
@@ -98,10 +97,10 @@ router.put("/update/:id", upload.array("images", 5), async (req, res) => {
 
     const result = await pool.query(
       `UPDATE products
-       SET name=$1, category=$2, price=$3, stock=$4, images=$5
-       WHERE id=$6
+       SET name=$1, category=$2, subcategory=$3, price=$4, stock=$5, images=$6
+       WHERE id=$7
        RETURNING *`,
-      [name, category, price, stock, imageUrls, req.params.id]
+      [name, category, subcategory, price, stock, imageUrls, req.params.id]
     );
 
     res.json({
