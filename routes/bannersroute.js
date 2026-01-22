@@ -1,60 +1,79 @@
 const express = require("express");
 const multer = require("multer");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const streamifier = require("streamifier");
 const cloudinary = require("./cloudinaryConfig");
-const BannerImage = require("./models/BannerImage"); // MongoDB model
+const pool = require('../db');
 
 const router = express.Router();
 
-// Multer storage config for Cloudinary
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: "banners",       // Cloudinary folder
-    allowed_formats: ["jpg", "png", "jpeg", "webp"],
-    transformation: [{ width: 1200, crop: "limit" }], // optional
-  },
-});
 
+// Multer memory storage
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// Upload new banner image (admin only)
+// Upload a new banner
 router.post("/add", upload.single("image"), async (req, res) => {
   try {
-    const banner = new BannerImage({ url: req.file.path }); // Cloudinary URL
-    await banner.save();
-    res.status(201).json(banner);
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    // Upload to Cloudinary
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "banners" },
+      async (error, result) => {
+        if (error) return res.status(500).json({ error: error.message });
+
+        // Insert into PostgreSQL
+        const query = `
+          INSERT INTO banner_images (url, public_id)
+          VALUES ($1, $2)
+          RETURNING *;
+        `;
+        const values = [result.secure_url, result.public_id];
+        const { rows } = await pool.query(query, values);
+
+        res.status(201).json(rows[0]);
+      }
+    );
+
+    streamifier.createReadStream(req.file.buffer).pipe(stream);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Get all banner images
+// Get all banners
 router.get("/all", async (req, res) => {
   try {
-    const images = await BannerImage.find();
-    res.json(images);
+    const { rows } = await pool.query(
+      "SELECT * FROM banner_images ORDER BY created_at DESC;"
+    );
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Delete a banner by ID
 router.delete("/delete/:id", async (req, res) => {
   try {
-    const banner = await BannerImage.findById(req.params.id);
+    const { rows } = await pool.query(
+      "SELECT * FROM banner_images WHERE id = $1",
+      [req.params.id]
+    );
+    const banner = rows[0];
+
     if (!banner) return res.status(404).json({ error: "Banner not found" });
 
     // Delete from Cloudinary
-    const publicId = banner.url.split("/").pop().split(".")[0]; // get file name without extension
-    await cloudinary.uploader.destroy(`banners/${publicId}`);
+    await cloudinary.uploader.destroy(banner.public_id);
 
-    // Delete from MongoDB
-    await banner.deleteOne();
+    // Delete from PostgreSQL
+    await pool.query("DELETE FROM banner_images WHERE id = $1", [req.params.id]);
 
     res.json({ message: "Banner deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 module.exports = router;
