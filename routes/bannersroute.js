@@ -1,47 +1,52 @@
 const express = require("express");
 const multer = require("multer");
-const streamifier = require("streamifier");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const cloudinary = require("../cloudinary");
-const pool = require('../db');
+const pool = require("../db");
+const path = require("path");
 
 const router = express.Router();
 
+// ---------------- Cloudinary storage ----------------
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "banners",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
+    public_id: (req, file) => {
+      const nameWithoutExt = path.parse(file.originalname).name;
+      return `${Date.now()}-${nameWithoutExt}`;
+    },
+  },
+});
 
-// Multer memory storage
-const storage = multer.memoryStorage();
+// Multer setup
 const upload = multer({ storage });
 
-// Upload a new banner
+// ---------------- Upload a new banner ----------------
 router.post("/add", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    // Upload to Cloudinary
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: "banners" },
-      async (error, result) => {
-        if (error) return res.status(500).json({ error: error.message });
+    const { path: imageUrl, filename: public_id } = req.file;
 
-        // Insert into PostgreSQL
-        const query = `
-          INSERT INTO banner_images (url, public_id)
-          VALUES ($1, $2)
-          RETURNING *;
-        `;
-        const values = [result.secure_url, result.public_id];
-        const { rows } = await pool.query(query, values);
+    // Insert into PostgreSQL
+    const query = `
+      INSERT INTO banner_images (url, public_id)
+      VALUES ($1, $2)
+      RETURNING *;
+    `;
+    const values = [imageUrl, public_id];
+    const { rows } = await pool.query(query, values);
 
-        res.status(201).json(rows[0]);
-      }
-    );
-
-    streamifier.createReadStream(req.file.buffer).pipe(stream);
+    res.status(201).json(rows[0]);
   } catch (err) {
+    console.error("Upload error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Get all banners
+// ---------------- Get all banners ----------------
 router.get("/all", async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -53,7 +58,7 @@ router.get("/all", async (req, res) => {
   }
 });
 
-// Delete a banner by ID
+// ---------------- Delete a banner by ID ----------------
 router.delete("/delete/:id", async (req, res) => {
   try {
     const { rows } = await pool.query(
