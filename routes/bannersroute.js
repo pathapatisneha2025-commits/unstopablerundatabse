@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const streamifier = require("streamifier");
-const cloudinary = require("./cloudinary");
+const cloudinary = require("../cloudinary");
 const pool = require('../db');
 
 const router = express.Router();
