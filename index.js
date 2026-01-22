@@ -5,6 +5,7 @@ const Cart = require("./routes/cartroute");
 const OrdersRoute = require("./routes/ordersroute");
 const UsersRoute = require("./routes/userroute");
 const BannerRoute = require("./routes/bannersroute");
+const ActionsRoute = require("./routes/activites");
 
 
 
@@ -19,6 +20,7 @@ app.use("/orders",OrdersRoute);
 app.use("/user",UsersRoute);
 app.use("/banner",BannerRoute);
 
+app.use("/activities", ActionsRoute);
 
 // Test Route
 app.get("/", (req, res) => {

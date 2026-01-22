@@ -80,5 +80,45 @@ router.delete("/delete/:id", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+router.put(
+  "/update/:id",
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Get old banner
+      const oldBanner = await pool.query(
+        "SELECT public_id FROM banner_images WHERE id = $1",
+        [id]
+      );
+
+      if (oldBanner.rows.length === 0) {
+        return res.status(404).json({ error: "Banner not found" });
+      }
+
+      // Delete old image from Cloudinary
+      await cloudinary.uploader.destroy(oldBanner.rows[0].public_id);
+
+      // New uploaded image
+      const { path: imageUrl, filename: public_id } = req.file;
+
+      // Update DB
+      const updated = await pool.query(
+        `UPDATE banner_images
+         SET image_url = $1, public_id = $2
+         WHERE id = $3
+         RETURNING *`,
+        [imageUrl, public_id, id]
+      );
+
+      res.json(updated.rows[0]);
+    } catch (err) {
+      console.error("Update error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+
 
 module.exports = router;
