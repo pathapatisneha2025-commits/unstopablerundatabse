@@ -28,7 +28,7 @@ router.post("/add", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    const { path: imageUrl } = req.file; // Only use image_url
+    const imageUrl = req.file.path || req.file.url; // fallback if path is undefined
 
     const query = `
       INSERT INTO banner_images (image_url)
@@ -44,6 +44,7 @@ router.post("/add", upload.single("image"), async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // ---------------- Get all banners ----------------
 router.get("/all", async (req, res) => {
