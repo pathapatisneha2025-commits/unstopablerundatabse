@@ -5,7 +5,7 @@ const Cart = require("./routes/cartroute");
 const OrdersRoute = require("./routes/ordersroute");
 const UsersRoute = require("./routes/userroute");
 const BannerRoute = require("./routes/bannersroute");
-const ActionsRoute = require("./routes/activities");
+const ActionsRoute = require("./routes/Activities");
 const ServicesRoute = require("./routes/services");
 
 
