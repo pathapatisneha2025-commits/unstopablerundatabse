@@ -20,7 +20,7 @@ app.use("/orders",OrdersRoute);
 app.use("/user",UsersRoute);
 app.use("/banner",BannerRoute);
 
-app.use("/activities", ActionsRoute);
+app.use("/activities",ActionsRoute);
 
 // Test Route
 app.get("/", (req, res) => {
