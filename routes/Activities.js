@@ -7,7 +7,7 @@ const path = require("path");
 
 const router = express.Router();
 
-// ---------------- Cloudinary storage for activities ----------------
+// ---------------- Cloudinary storage ----------------
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -20,7 +20,6 @@ const storage = new CloudinaryStorage({
   },
 });
 
-// Multer setup
 const upload = multer({ storage });
 
 // ---------------- Add new activity ----------------
@@ -29,14 +28,14 @@ router.post("/add", upload.single("image"), async (req, res) => {
     const { title, subtitle, link } = req.body;
     if (!req.file) return res.status(400).json({ error: "No image uploaded" });
 
-    const { path: image_url, filename: public_id } = req.file;
+    const { path: image_url } = req.file; // only URL, no public_id
 
     const query = `
-      INSERT INTO activities (title, subtitle, image_url, link, public_id)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO activities (title, subtitle, image_url, link)
+      VALUES ($1, $2, $3, $4)
       RETURNING *;
     `;
-    const values = [title, subtitle, image_url, link, public_id];
+    const values = [title, subtitle, image_url, link];
     const { rows } = await pool.query(query, values);
 
     res.status(201).json(rows[0]);
@@ -54,6 +53,7 @@ router.get("/all", async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
+    console.error("Fetch activities error:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -68,12 +68,12 @@ router.delete("/delete/:id", async (req, res) => {
     const activity = rows[0];
     if (!activity) return res.status(404).json({ error: "Activity not found" });
 
-    // Delete from Cloudinary
-    if (activity.public_id) await cloudinary.uploader.destroy(activity.public_id);
+    // We no longer delete from Cloudinary
 
     await pool.query("DELETE FROM activities WHERE id = $1", [req.params.id]);
     res.json({ message: "Activity deleted successfully" });
   } catch (err) {
+    console.error("Delete activity error:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -89,20 +89,15 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
     if (!activity) return res.status(404).json({ error: "Activity not found" });
 
     let image_url = activity.image_url;
-    let public_id = activity.public_id;
 
     if (req.file) {
-      // Delete old image from Cloudinary
-      if (activity.public_id) await cloudinary.uploader.destroy(activity.public_id);
-
-      image_url = req.file.path;
-      public_id = req.file.filename;
+      image_url = req.file.path; // just replace URL
     }
 
     const updateQuery = `
       UPDATE activities
-      SET title=$1, subtitle=$2, link=$3, image_url=$4, public_id=$5
-      WHERE id=$6
+      SET title=$1, subtitle=$2, link=$3, image_url=$4
+      WHERE id=$5
       RETURNING *;
     `;
     const values = [
@@ -110,7 +105,6 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
       subtitle || activity.subtitle,
       link || activity.link,
       image_url,
-      public_id,
       id,
     ];
 

@@ -28,15 +28,14 @@ router.post("/add", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    const { path: imageUrl, filename: public_id } = req.file;
+    const { path: imageUrl } = req.file; // Only use image_url
 
-    // Insert into PostgreSQL
     const query = `
-      INSERT INTO banner_images (url, public_id)
-      VALUES ($1, $2)
+      INSERT INTO banner_images (image_url)
+      VALUES ($1)
       RETURNING *;
     `;
-    const values = [imageUrl, public_id];
+    const values = [imageUrl];
     const { rows } = await pool.query(query, values);
 
     res.status(201).json(rows[0]);
@@ -54,6 +53,7 @@ router.get("/all", async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
+    console.error("Fetch banners error:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -69,14 +69,13 @@ router.delete("/delete/:id", async (req, res) => {
 
     if (!banner) return res.status(404).json({ error: "Banner not found" });
 
-    // Delete from Cloudinary
-    await cloudinary.uploader.destroy(banner.public_id);
-
-    // Delete from PostgreSQL
+    // Can't delete from Cloudinary because we don't store public_id
+    // Only delete from PostgreSQL
     await pool.query("DELETE FROM banner_images WHERE id = $1", [req.params.id]);
 
     res.json({ message: "Banner deleted successfully" });
   } catch (err) {
+    console.error("Delete banner error:", err);
     res.status(500).json({ error: err.message });
   }
 });
