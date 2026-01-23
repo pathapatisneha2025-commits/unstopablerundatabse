@@ -150,7 +150,7 @@ router.put(
       const result = await pool.query(
         `UPDATE products
          SET name=$1, category=$2, subcategory=$3,
-             main_image=$4, thumbnails=$5, variants=$6,
+             main_image=$4, thumbnails=$5, variants=$6
             
          WHERE id=$7
          RETURNING *`,
