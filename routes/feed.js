@@ -9,21 +9,27 @@ const router = express.Router();
 // ---------------- Cloudinary storage ----------------
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: (req, file) => {
-    let folder = "feed";
-    let allowedFormats = ["jpg", "jpeg", "png", "webp"];
-    if (file.mimetype.startsWith("video/")) {
-      folder = "feed/videos";
-      allowedFormats = ["mp4", "mov", "avi", "webm"];
+  params: async (req, file) => {
+    if (file.mimetype.startsWith("image/")) {
+      return {
+        folder: "feed/images",
+        allowed_formats: ["jpg", "jpeg", "png", "webp"],
+        resource_type: "image",
+        public_id: `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`,
+      };
+    } else if (file.mimetype.startsWith("video/")) {
+      return {
+        folder: "feed/videos",
+        allowed_formats: ["mp4", "mov", "avi", "webm"],
+        resource_type: "video",
+        public_id: `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`,
+      };
+    } else {
+      throw new Error("Unsupported file type");
     }
-
-    return {
-      folder,
-      allowed_formats: allowedFormats,
-      public_id: `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`,
-    };
   },
 });
+
 
 const upload = multer({ storage });
 
