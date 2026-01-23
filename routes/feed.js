@@ -17,7 +17,6 @@ const storage = new CloudinaryStorage({
       allowedFormats = ["mp4", "mov", "avi", "webm"];
     }
 
-    const ext = file.originalname.split(".").pop();
     return {
       folder,
       allowed_formats: allowedFormats,
@@ -43,7 +42,7 @@ router.post("/add", upload.single("file"), async (req, res) => {
     const fileUrl = req.file.path; // Cloudinary URL
 
     const query = `
-      INSERT INTO feed_items (type, file_url)
+      INSERT INTO feed_items (type, src)
       VALUES ($1, $2)
       RETURNING *;
     `;
@@ -61,7 +60,7 @@ router.post("/add", upload.single("file"), async (req, res) => {
 router.get("/all", async (req, res) => {
   try {
     const { rows } = await pool.query(
-      "SELECT id, type, file_url FROM feed_items ORDER BY id ASC;"
+      "SELECT id, type, src FROM feed_items ORDER BY id ASC;"
     );
     res.json(rows);
   } catch (err) {
@@ -97,7 +96,7 @@ router.put("/update/:id", upload.single("file"), async (req, res) => {
     const { rows } = await pool.query("SELECT * FROM feed_items WHERE id = $1", [id]);
     if (rows.length === 0) return res.status(404).json({ error: "Feed item not found" });
 
-    let fileUrl = rows[0].file_url;
+    let fileUrl = rows[0].src;
 
     if (req.file) {
       fileUrl = req.file.path;
@@ -105,9 +104,9 @@ router.put("/update/:id", upload.single("file"), async (req, res) => {
 
     const query = `
       UPDATE feed_items
-      SET type = $1, file_url = $2
+      SET type = $1, src = $2
       WHERE id = $3
-      RETURNING id, type, file_url;
+      RETURNING id, type, src;
     `;
     const values = [type || rows[0].type, fileUrl, id];
     const { rows: updatedRows } = await pool.query(query, values);
