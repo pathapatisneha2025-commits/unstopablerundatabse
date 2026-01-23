@@ -13,44 +13,66 @@ router.post("/add", async (req, res) => {
   }
 
   try {
-    // Fetch current product stock for all items
-    const productIds = items.map(i => i.product_id);
+    // Fetch products with variants
+    const productIds = items.map((i) => i.product_id);
     const productsRes = await pool.query(
-      `SELECT id, stock FROM products WHERE id = ANY($1::int[])`,
+      `SELECT id, name, variants FROM products WHERE id = ANY($1::int[])`,
       [productIds]
     );
-    const productStocks = productsRes.rows.reduce((acc, p) => {
-      acc[p.id] = p.stock;
-      return acc;
-    }, {});
 
-    // Check if any item is out of stock
+    // Build a stock map based on variant (key: productId_size_color)
+    const productStocks = {};
+    const productsMap = {};
+    productsRes.rows.forEach((p) => {
+      productsMap[p.id] = p;
+      p.variants.forEach((v) => {
+        const key = `${p.id}_${v.size}_${v.color}`;
+        productStocks[key] = v.stock;
+      });
+    });
+
+    // Check stock for each item
     for (const item of items) {
-      if (!productStocks[item.product_id] || productStocks[item.product_id] < item.quantity) {
-        return res.status(400).json({ message: `Product ${item.product_name} is out of stock or insufficient quantity` });
+      const key = `${item.product_id}_${item.variant.size}_${item.variant.color}`;
+      if (!productStocks[key] || productStocks[key] < item.quantity) {
+        return res.status(400).json({
+          message: `Product ${item.product_name} (${item.variant.size}/${item.variant.color}) is out of stock or insufficient quantity`
+        });
       }
     }
 
-    // Deduct stock immediately
+    // Deduct stock inside variants JSON
     for (const item of items) {
+      const product = productsMap[item.product_id];
+      const updatedVariants = product.variants.map((v) => {
+        if (v.size === item.variant.size && v.color === item.variant.color) {
+          return { ...v, stock: v.stock - item.quantity };
+        }
+        return v;
+      });
+
       await pool.query(
-        "UPDATE products SET stock = stock - $1 WHERE id = $2",
-        [item.quantity, item.product_id]
+        "UPDATE products SET variants=$1 WHERE id=$2",
+        [JSON.stringify(updatedVariants), item.product_id]
       );
     }
 
-    // Check if user already has a cart
+    // Handle user cart
     const existingCart = await pool.query(
       "SELECT id, items FROM cart WHERE user_id=$1",
       [userId]
     );
 
     if (existingCart.rows.length > 0) {
-      // Merge items with existing cart
       const currentItems = existingCart.rows[0].items;
 
-      items.forEach(newItem => {
-        const index = currentItems.findIndex(i => i.product_id === newItem.product_id);
+      items.forEach((newItem) => {
+        const index = currentItems.findIndex(
+          (i) =>
+            i.product_id === newItem.product_id &&
+            i.variant.size === newItem.variant.size &&
+            i.variant.color === newItem.variant.color
+        );
         if (index !== -1) {
           currentItems[index].quantity += newItem.quantity;
         } else {
@@ -63,7 +85,6 @@ router.post("/add", async (req, res) => {
         [JSON.stringify(currentItems), existingCart.rows[0].id]
       );
     } else {
-      // Create new cart
       await pool.query(
         "INSERT INTO cart (user_id, items) VALUES ($1, $2)",
         [userId, JSON.stringify(items)]
@@ -71,7 +92,6 @@ router.post("/add", async (req, res) => {
     }
 
     res.json({ message: "Products added to cart and stock updated" });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
