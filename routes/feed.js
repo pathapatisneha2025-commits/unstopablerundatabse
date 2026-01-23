@@ -1,23 +1,53 @@
 const express = require("express");
-const pool = require("../db"); // PostgreSQL pool
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../cloudinary"); // your Cloudinary config
+const pool = require("../db");
 
 const router = express.Router();
 
+// ---------------- Cloudinary storage ----------------
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: (req, file) => {
+    let folder = "feed";
+    let allowedFormats = ["jpg", "jpeg", "png", "webp"];
+    if (file.mimetype.startsWith("video/")) {
+      folder = "feed/videos";
+      allowedFormats = ["mp4", "mov", "avi", "webm"];
+    }
+
+    const ext = file.originalname.split(".").pop();
+    return {
+      folder,
+      allowed_formats: allowedFormats,
+      public_id: `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`,
+    };
+  },
+});
+
+const upload = multer({ storage });
+
 // ---------------- Add a new feed item ----------------
-router.post("/add", async (req, res) => {
+router.post("/add", upload.single("file"), async (req, res) => {
   try {
     const { type } = req.body;
-
     if (!type || !["video", "image"].includes(type)) {
       return res.status(400).json({ error: "Invalid type" });
     }
 
+    if (!req.file) {
+      return res.status(400).json({ error: "File is required" });
+    }
+
+    const fileUrl = req.file.path; // Cloudinary URL
+
     const query = `
-      INSERT INTO feed_items (type)
-      VALUES ($1)
+      INSERT INTO feed_items (type, file_url)
+      VALUES ($1, $2)
       RETURNING *;
     `;
-    const values = [type];
+    const values = [type, fileUrl];
     const { rows } = await pool.query(query, values);
 
     res.status(201).json(rows[0]);
@@ -31,7 +61,7 @@ router.post("/add", async (req, res) => {
 router.get("/all", async (req, res) => {
   try {
     const { rows } = await pool.query(
-      "SELECT id, type FROM feed_items ORDER BY id ASC;"
+      "SELECT id, type, file_url FROM feed_items ORDER BY id ASC;"
     );
     res.json(rows);
   } catch (err) {
@@ -40,7 +70,7 @@ router.get("/all", async (req, res) => {
   }
 });
 
-// ---------------- Delete a feed item by ID ----------------
+// ---------------- Delete a feed item ----------------
 router.delete("/delete/:id", async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -58,28 +88,31 @@ router.delete("/delete/:id", async (req, res) => {
   }
 });
 
-// ---------------- Update a feed item type ----------------
-router.put("/update/:id", async (req, res) => {
+// ---------------- Update feed item (type or file) ----------------
+router.put("/update/:id", upload.single("file"), async (req, res) => {
   try {
     const { id } = req.params;
     const { type } = req.body;
 
-    if (!type || !["video", "image"].includes(type)) {
-      return res.status(400).json({ error: "Invalid type" });
+    const { rows } = await pool.query("SELECT * FROM feed_items WHERE id = $1", [id]);
+    if (rows.length === 0) return res.status(404).json({ error: "Feed item not found" });
+
+    let fileUrl = rows[0].file_url;
+
+    if (req.file) {
+      fileUrl = req.file.path;
     }
 
     const query = `
       UPDATE feed_items
-      SET type = $1
-      WHERE id = $2
-      RETURNING id, type;
+      SET type = $1, file_url = $2
+      WHERE id = $3
+      RETURNING id, type, file_url;
     `;
-    const values = [type, id];
-    const { rows } = await pool.query(query, values);
+    const values = [type || rows[0].type, fileUrl, id];
+    const { rows: updatedRows } = await pool.query(query, values);
 
-    if (rows.length === 0) return res.status(404).json({ error: "Feed item not found" });
-
-    res.json(rows[0]);
+    res.json(updatedRows[0]);
   } catch (err) {
     console.error("Update feed error:", err);
     res.status(500).json({ error: err.message });
