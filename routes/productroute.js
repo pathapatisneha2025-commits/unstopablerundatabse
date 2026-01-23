@@ -151,7 +151,7 @@ router.put(
         `UPDATE products
          SET name=$1, category=$2, subcategory=$3,
              main_image=$4, thumbnails=$5, variants=$6,
-             updated_at=CURRENT_TIMESTAMP
+            
          WHERE id=$7
          RETURNING *`,
         [name, category, subcategory, mainImageUrl, thumbnailUrls, JSON.stringify(parsedVariants), req.params.id]
