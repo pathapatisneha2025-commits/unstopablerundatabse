@@ -105,7 +105,7 @@ router.post("/add", async (req, res) => {
 router.get("/all", async (req, res) => {
   try {
     const cartItems = await pool.query(
-      "SELECT * FROM cart ORDER BY user_id"
+      "SELECT * FROM cart 
     );
     res.json(cartItems.rows);
   } catch (err) {
