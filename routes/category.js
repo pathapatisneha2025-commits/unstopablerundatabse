@@ -37,7 +37,7 @@ router.get("/all", async (req, res) => {
 // ---------------- Add new collection ----------------
 router.post("/add", upload.single("image"), async (req, res) => {
   try {
-    const { id, tag, title, subtitle, path: collectionPath } = req.body;
+    const {  tag, title, subtitle, path: collectionPath } = req.body;
 
     if (!req.file) return res.status(400).json({ error: "No image uploaded" });
 
