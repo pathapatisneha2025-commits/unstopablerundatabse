@@ -120,4 +120,18 @@ router.put("/update-status/:id", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+router.get("/guest/:mobile", (req, res) => {
+  const { mobile } = req.params;
+  if (!mobile) return res.status(400).json({ message: "Mobile number is required" });
+
+  const guestOrders = orders.filter(
+    order => order.user_id.startsWith("guest_") && order.address.mobile === mobile
+  );
+
+  if (guestOrders.length === 0) {
+    return res.status(404).json({ message: "No orders found for this number" });
+  }
+
+  res.json(guestOrders);
+});
 module.exports = router;
