@@ -120,18 +120,51 @@ router.put("/update-status/:id", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-router.get("/guest/:mobile", (req, res) => {
+router.get("/guest/:mobile", async (req, res) => {
   const { mobile } = req.params;
-  if (!mobile) return res.status(400).json({ message: "Mobile number is required" });
 
-  const guestOrders = orders.filter(
-    order => order.user_id.startsWith("guest_") && order.address.mobile === mobile
-  );
-
-  if (guestOrders.length === 0) {
-    return res.status(404).json({ message: "No orders found for this number" });
+  if (!mobile) {
+    return res.status(400).json({ message: "Mobile number is required" });
   }
 
-  res.json(guestOrders);
+  try {
+    const query = `
+      SELECT 
+        o.id, 
+        o.user_id, 
+        o.status, 
+        o.created_at, 
+        o.total_price, 
+        o.address, 
+        COALESCE(json_agg(
+          json_build_object(
+            'product_id', oi.product_id,
+            'product_name', oi.product_name,
+            'product_price', oi.product_price,
+            'quantity', oi.quantity,
+            'product_images', oi.product_images
+          )
+        ) FILTER (WHERE oi.id IS NOT NULL), '[]') AS items
+      FROM orders o
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      WHERE o.user_id LIKE 'guest_%' 
+        AND o.address->>'mobile' ILIKE $1
+      GROUP BY o.id
+      ORDER BY o.created_at DESC;
+    `;
+
+    // Using ILIKE allows partial or case-insensitive match
+    const { rows } = await pool.query(query, [`%${mobile}%`]);
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "No orders found for this number" });
+    }
+
+    res.json(rows);
+
+  } catch (err) {
+    console.error("Error fetching guest orders:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 module.exports = router;
