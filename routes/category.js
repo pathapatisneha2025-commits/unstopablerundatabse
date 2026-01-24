@@ -1,9 +1,9 @@
-import express from "express";
-import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../cloudinary.js";
-import pool from "../db.js"; // your PostgreSQL pool
-import path from "path";
+const express = require("express");
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../cloudinary"); // CommonJS compatible
+const pool = require("../db"); // PostgreSQL pool
+const path = require("path");
 
 const router = express.Router();
 
@@ -117,4 +117,4 @@ router.delete("/delete/:id", async (req, res) => {
   }
 });
 
-export default router;
+module.exports = router;
