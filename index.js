@@ -8,6 +8,7 @@ const BannerRoute = require("./routes/bannersroute");
 const ActionsRoute = require("./routes/Activities");
 const ServicesRoute = require("./routes/services");
 const FeedRoute = require("./routes/feed");
+const FeaturedCollection = require("./routes/collection");
 
 
 
@@ -25,6 +26,7 @@ app.use("/banner",BannerRoute);
 app.use("/activities",ActionsRoute);
 app.use("/services",ServicesRoute);
 app.use("/feed",FeedRoute);
+app.use("/fatured",FeaturedCollection);
 
 
 // Test Route
