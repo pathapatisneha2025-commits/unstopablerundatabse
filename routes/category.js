@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
-const cloudinary = require("../cloudinary"); // CommonJS compatible
+const cloudinary = require("../cloudinary"); // Cloudinary config
 const pool = require("../db"); // PostgreSQL pool
 const path = require("path");
 
@@ -37,7 +37,7 @@ router.get("/all", async (req, res) => {
 // ---------------- Add new collection ----------------
 router.post("/add", upload.single("image"), async (req, res) => {
   try {
-    const {  tag, title, subtitle, path: collectionPath } = req.body;
+    const { tag, title, subtitle, path: collectionPath } = req.body;
 
     if (!req.file) return res.status(400).json({ error: "No image uploaded" });
 
@@ -45,11 +45,11 @@ router.post("/add", upload.single("image"), async (req, res) => {
     const publicId = req.file.filename;
 
     const query = `
-      INSERT INTO collections (id, tag, title, subtitle, image_url, public_id, path)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
+      INSERT INTO collections (tag, title, subtitle, image_url, public_id, path)
+      VALUES ($1,$2,$3,$4,$5,$6)
       RETURNING *;
     `;
-    const values = [id, tag, title, subtitle, imageUrl, publicId, collectionPath || "/shop"];
+    const values = [tag, title, subtitle, imageUrl, publicId, collectionPath || "/shop"];
     const { rows } = await pool.query(query, values);
 
     res.status(201).json(rows[0]);
@@ -65,18 +65,14 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
     const { id } = req.params;
     const { tag, title, subtitle, path: collectionPath } = req.body;
 
-    // Get old collection
     const oldCollection = await pool.query("SELECT * FROM collections WHERE id=$1", [id]);
     if (!oldCollection.rows[0]) return res.status(404).json({ error: "Collection not found" });
 
     let imageUrl = oldCollection.rows[0].image_url;
     let publicId = oldCollection.rows[0].public_id;
 
-    // If a new image is uploaded, replace old one
     if (req.file) {
-      // Delete old image from Cloudinary
-      if (publicId) await cloudinary.uploader.destroy(publicId);
-
+      if (publicId) await cloudinary.uploader.destroy(publicId); // delete old image
       imageUrl = req.file.path;
       publicId = req.file.filename;
     }
@@ -105,9 +101,7 @@ router.delete("/delete/:id", async (req, res) => {
 
     if (!collection) return res.status(404).json({ error: "Collection not found" });
 
-    // Delete image from Cloudinary
     if (collection.public_id) await cloudinary.uploader.destroy(collection.public_id);
-
     await pool.query("DELETE FROM collections WHERE id=$1", [id]);
 
     res.json({ message: "Collection deleted successfully" });
