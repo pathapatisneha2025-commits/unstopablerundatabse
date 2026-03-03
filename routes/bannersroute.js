@@ -30,17 +30,33 @@ router.post("/add", upload.single("image"), async (req, res) => {
       description_visible = false,
       badge_text = "",
       badge_visible = false,
+      stats_visible = false,
+      stat_athletes = "50K+",
+      stat_countries = "120+",
+      stat_rating = "4.9★",
     } = req.body;
 
     const imageUrl = req.file.path || req.file.url;
 
     const query = `
       INSERT INTO banner_images 
-        (image_url, title, description, title_visible, description_visible, badge_text, badge_visible)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+        (image_url, title, description, title_visible, description_visible, badge_text, badge_visible, stats_visible, stat_athletes, stat_countries, stat_rating)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       RETURNING *;
     `;
-    const values = [imageUrl, title, description, title_visible, description_visible, badge_text, badge_visible];
+    const values = [
+      imageUrl,
+      title,
+      description,
+      title_visible,
+      description_visible,
+      badge_text,
+      badge_visible,
+      stats_visible,
+      stat_athletes,
+      stat_countries,
+      stat_rating,
+    ];
 
     const { rows } = await pool.query(query, values);
     res.status(201).json(rows[0]);
@@ -92,13 +108,18 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
       description_visible = false,
       badge_text = "",
       badge_visible = false,
+      stats_visible = false,
+      stat_athletes = "50K+",
+      stat_countries = "120+",
+      stat_rating = "4.9★",
     } = req.body;
 
     const oldBanner = await pool.query(
       "SELECT image_url FROM banner_images WHERE id = $1",
       [id]
     );
-    if (!oldBanner.rows.length) return res.status(404).json({ error: "Banner not found" });
+    if (!oldBanner.rows.length)
+      return res.status(404).json({ error: "Banner not found" });
 
     let imageUrl = oldBanner.rows[0].image_url;
     if (req.file) imageUrl = req.file.path;
@@ -111,10 +132,27 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
            title_visible = $4,
            description_visible = $5,
            badge_text = $6,
-           badge_visible = $7
-       WHERE id = $8
+           badge_visible = $7,
+           stats_visible = $8,
+           stat_athletes = $9,
+           stat_countries = $10,
+           stat_rating = $11
+       WHERE id = $12
        RETURNING *`,
-      [imageUrl, title, description, title_visible, description_visible, badge_text, badge_visible, id]
+      [
+        imageUrl,
+        title,
+        description,
+        title_visible,
+        description_visible,
+        badge_text,
+        badge_visible,
+        stats_visible,
+        stat_athletes,
+        stat_countries,
+        stat_rating,
+        id,
+      ]
     );
 
     res.json(updated.rows[0]);
@@ -124,6 +162,28 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
   }
 });
 
+// ---------------- Toggle stats visibility ----------------
+router.put("/toggle/stats/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await pool.query(
+      "SELECT stats_visible FROM banner_images WHERE id = $1",
+      [id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: "Banner not found" });
+
+    const newVisibility = !rows[0].stats_visible;
+    const updated = await pool.query(
+      "UPDATE banner_images SET stats_visible = $1 WHERE id = $2 RETURNING *",
+      [newVisibility, id]
+    );
+
+    res.json(updated.rows[0]);
+  } catch (err) {
+    console.error("Toggle stats visibility error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 // ---------------- Toggle title visibility ----------------
 router.put("/toggle/title/:id", async (req, res) => {
   try {
