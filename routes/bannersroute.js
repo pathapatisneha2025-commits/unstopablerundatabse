@@ -28,18 +28,24 @@ router.post("/add", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    const { title = "", description = "", is_visible = false } = req.body;
+    const {
+      title = "",
+      description = "",
+      title_visible = false,
+      description_visible = false,
+    } = req.body;
+
     const imageUrl = req.file.path || req.file.url;
     const public_id = req.file.filename;
 
     const query = `
-      INSERT INTO banner_images (image_url, public_id, title, description, is_visible)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO banner_images (image_url, public_id, title, description, title_visible, description_visible)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *;
     `;
-    const values = [imageUrl, public_id, title, description, is_visible];
-    const { rows } = await pool.query(query, values);
+    const values = [imageUrl, public_id, title, description, title_visible, description_visible];
 
+    const { rows } = await pool.query(query, values);
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error("Upload error:", err);
@@ -85,11 +91,16 @@ router.delete("/delete/:id", async (req, res) => {
 router.put("/update/:id", upload.single("image"), async (req, res) => {
   try {
     const { id } = req.params;
-    const { title = "", description = "", is_visible = false } = req.body;
+    const {
+      title = "",
+      description = "",
+      title_visible = false,
+      description_visible = false,
+    } = req.body;
 
     // Get old banner
     const oldBanner = await pool.query(
-      "SELECT public_id FROM banner_images WHERE id = $1",
+      "SELECT image_url, public_id FROM banner_images WHERE id = $1",
       [id]
     );
 
@@ -97,10 +108,9 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
       return res.status(404).json({ error: "Banner not found" });
     }
 
-    let imageUrl = oldBanner.rows[0].image_url;
-    let public_id = oldBanner.rows[0].public_id;
+    let { image_url: imageUrl, public_id } = oldBanner.rows[0];
 
-    // If new image uploaded, replace old one
+    // Replace image if new uploaded
     if (req.file) {
       await cloudinary.uploader.destroy(public_id);
       imageUrl = req.file.path;
@@ -109,10 +119,15 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
 
     const updated = await pool.query(
       `UPDATE banner_images
-       SET image_url = $1, public_id = $2, title = $3, description = $4, is_visible = $5
-       WHERE id = $6
+       SET image_url = $1,
+           public_id = $2,
+           title = $3,
+           description = $4,
+           title_visible = $5,
+           description_visible = $6
+       WHERE id = $7
        RETURNING *`,
-      [imageUrl, public_id, title, description, is_visible, id]
+      [imageUrl, public_id, title, description, title_visible, description_visible, id]
     );
 
     res.json(updated.rows[0]);
@@ -122,28 +137,50 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
   }
 });
 
-router.put("/toggle/:id", async (req, res) => {
+// Toggle title visibility
+router.put("/toggle/title/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { rows } = await pool.query(
-      "SELECT is_visible FROM banner_images WHERE id = $1",
+      "SELECT title_visible FROM banner_images WHERE id = $1",
       [id]
     );
     if (!rows[0]) return res.status(404).json({ error: "Banner not found" });
 
-    const newVisibility = !rows[0].is_visible;
-
+    const newVisibility = !rows[0].title_visible;
     const updated = await pool.query(
-      "UPDATE banner_images SET is_visible = $1 WHERE id = $2 RETURNING *",
+      "UPDATE banner_images SET title_visible = $1 WHERE id = $2 RETURNING *",
       [newVisibility, id]
     );
 
     res.json(updated.rows[0]);
   } catch (err) {
-    console.error("Toggle visibility error:", err);
+    console.error("Toggle title visibility error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
+// Toggle description visibility
+router.put("/toggle/description/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await pool.query(
+      "SELECT description_visible FROM banner_images WHERE id = $1",
+      [id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: "Banner not found" });
+
+    const newVisibility = !rows[0].description_visible;
+    const updated = await pool.query(
+      "UPDATE banner_images SET description_visible = $1 WHERE id = $2 RETURNING *",
+      [newVisibility, id]
+    );
+
+    res.json(updated.rows[0]);
+  } catch (err) {
+    console.error("Toggle description visibility error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;
