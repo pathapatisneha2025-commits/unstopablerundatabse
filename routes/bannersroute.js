@@ -19,6 +19,7 @@ const storage = new CloudinaryStorage({
 const upload = multer({ storage });
 
 // ---------------- Upload a new banner ----------------
+// ---------------- Upload a new banner ----------------
 router.post("/add", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
@@ -34,14 +35,15 @@ router.post("/add", upload.single("image"), async (req, res) => {
       stat_athletes = "50K+",
       stat_countries = "120+",
       stat_rating = "4.9★",
+      scroll_items = "[]", // received as JSON string
     } = req.body;
 
     const imageUrl = req.file.path || req.file.url;
 
     const query = `
       INSERT INTO banner_images 
-        (image_url, title, description, title_visible, description_visible, badge_text, badge_visible, stats_visible, stat_athletes, stat_countries, stat_rating)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        (image_url, title, description, title_visible, description_visible, badge_text, badge_visible, stats_visible, stat_athletes, stat_countries, stat_rating, scroll_items)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
       RETURNING *;
     `;
     const values = [
@@ -56,6 +58,7 @@ router.post("/add", upload.single("image"), async (req, res) => {
       stat_athletes,
       stat_countries,
       stat_rating,
+      scroll_items, // store JSON string in DB
     ];
 
     const { rows } = await pool.query(query, values);
@@ -112,6 +115,7 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
       stat_athletes = "50K+",
       stat_countries = "120+",
       stat_rating = "4.9★",
+      scroll_items = "[]", // JSON string
     } = req.body;
 
     const oldBanner = await pool.query(
@@ -136,8 +140,9 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
            stats_visible = $8,
            stat_athletes = $9,
            stat_countries = $10,
-           stat_rating = $11
-       WHERE id = $12
+           stat_rating = $11,
+           scroll_items = $12
+       WHERE id = $13
        RETURNING *`,
       [
         imageUrl,
@@ -151,6 +156,7 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
         stat_athletes,
         stat_countries,
         stat_rating,
+        scroll_items,
         id,
       ]
     );
