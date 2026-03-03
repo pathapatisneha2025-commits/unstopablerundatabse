@@ -28,14 +28,16 @@ router.post("/add", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    const imageUrl = req.file.path || req.file.url; // fallback if path is undefined
+    const { title = "", description = "", is_visible = false } = req.body;
+    const imageUrl = req.file.path || req.file.url;
+    const public_id = req.file.filename;
 
     const query = `
-      INSERT INTO banner_images (image_url)
-      VALUES ($1)
+      INSERT INTO banner_images (image_url, public_id, title, description, is_visible)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *;
     `;
-    const values = [imageUrl];
+    const values = [imageUrl, public_id, title, description, is_visible];
     const { rows } = await pool.query(query, values);
 
     res.status(201).json(rows[0]);
@@ -80,45 +82,68 @@ router.delete("/delete/:id", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-router.put(
-  "/update/:id",
-  upload.single("image"),
-  async (req, res) => {
-    try {
-      const { id } = req.params;
+router.put("/update/:id", upload.single("image"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title = "", description = "", is_visible = false } = req.body;
 
-      // Get old banner
-      const oldBanner = await pool.query(
-        "SELECT public_id FROM banner_images WHERE id = $1",
-        [id]
-      );
+    // Get old banner
+    const oldBanner = await pool.query(
+      "SELECT public_id FROM banner_images WHERE id = $1",
+      [id]
+    );
 
-      if (oldBanner.rows.length === 0) {
-        return res.status(404).json({ error: "Banner not found" });
-      }
-
-      // Delete old image from Cloudinary
-      await cloudinary.uploader.destroy(oldBanner.rows[0].public_id);
-
-      // New uploaded image
-      const { path: imageUrl, filename: public_id } = req.file;
-
-      // Update DB
-      const updated = await pool.query(
-        `UPDATE banner_images
-         SET image_url = $1, public_id = $2
-         WHERE id = $3
-         RETURNING *`,
-        [imageUrl, public_id, id]
-      );
-
-      res.json(updated.rows[0]);
-    } catch (err) {
-      console.error("Update error:", err);
-      res.status(500).json({ error: err.message });
+    if (oldBanner.rows.length === 0) {
+      return res.status(404).json({ error: "Banner not found" });
     }
+
+    let imageUrl = oldBanner.rows[0].image_url;
+    let public_id = oldBanner.rows[0].public_id;
+
+    // If new image uploaded, replace old one
+    if (req.file) {
+      await cloudinary.uploader.destroy(public_id);
+      imageUrl = req.file.path;
+      public_id = req.file.filename;
+    }
+
+    const updated = await pool.query(
+      `UPDATE banner_images
+       SET image_url = $1, public_id = $2, title = $3, description = $4, is_visible = $5
+       WHERE id = $6
+       RETURNING *`,
+      [imageUrl, public_id, title, description, is_visible, id]
+    );
+
+    res.json(updated.rows[0]);
+  } catch (err) {
+    console.error("Update error:", err);
+    res.status(500).json({ error: err.message });
   }
-);
+});
+
+router.put("/toggle/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await pool.query(
+      "SELECT is_visible FROM banner_images WHERE id = $1",
+      [id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: "Banner not found" });
+
+    const newVisibility = !rows[0].is_visible;
+
+    const updated = await pool.query(
+      "UPDATE banner_images SET is_visible = $1 WHERE id = $2 RETURNING *",
+      [newVisibility, id]
+    );
+
+    res.json(updated.rows[0]);
+  } catch (err) {
+    console.error("Toggle visibility error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 module.exports = router;
