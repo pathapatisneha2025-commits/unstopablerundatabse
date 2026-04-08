@@ -20,7 +20,7 @@ app.use(express.json());
 app.use("/products", AddProducts);
 app.use("/cart", Cart);
 app.use("/orders",OrdersRoute);
-app.use("/euser",UsersRoute);
+app.use("/user",UsersRoute);
 app.use("/banner",BannerRoute);
 
 app.use("/activities",ActionsRoute);
