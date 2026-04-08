@@ -55,4 +55,17 @@ router.post("/auth/login", async (req, res) => {
   }
 });
 
+router.get("/all", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM eusers ORDER BY id DESC"
+    );
+
+    res.json({ success: true, users: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 module.exports = router;
